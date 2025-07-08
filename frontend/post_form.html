@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>글 작성/수정</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/index.html" class="nav-brand">MSA Project</a>
+            <div class="nav-links">
+                <a href="/board_list.html" class="nav-link">게시판</a>
+                <a href="/blog_list.html" class="nav-link">블로그</a>
+            </div>
+            <div id="auth-links" class="nav-auth"></div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="form-container">
+            <h1 id="form-title">새 글 작성</h1>
+            <form id="post-form">
+                <p id="error-message" style="color:red;"></p>
+                <div>
+                    <label for="title">제목:</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                <div>
+                    <label for="content">내용:</label>
+                    <textarea id="content" name="content" rows="10" required></textarea>
+                </div>
+                <button type="submit" id="submit-btn">저장</button>
+            </form>
+        </div>
+    </main>
+    <script src="/assets/js/auth.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const postType = params.get('type') || 'board';
+        const postId = params.get('id');
+        const isEditMode = !!postId;
+        const API_BASE_URL = '/api';
+
+        const form = document.getElementById('post-form');
+        const titleInput = document.getElementById('title');
+        const contentInput = document.getElementById('content');
+        const formTitle = document.getElementById('form-title');
+        const errorEl = document.getElementById('error-message');
+
+        async function initializeForm() {
+            const user = await getCurrentUser();
+            renderNavbar();
+
+            if (!user) {
+                alert('글을 작성하려면 로그인이 필요합니다.');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            const resourceName = (postType === 'board') ? 'posts' : 'articles';
+            formTitle.innerText = isEditMode ? `${postType} 글 수정` : `새 ${postType} 글 작성`;
+            
+            if (isEditMode) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/${postType}/${resourceName}/${postId}`);
+                    if (!response.ok) throw new Error('게시글 정보를 불러오는데 실패했습니다.');
+                    
+                    const data = await response.json();
+                    const post = data.post || data.article;
+
+                    // 작성자 본인인지 확인
+                    if (user.id !== post.owner_id) {
+                         alert('수정 권한이 없습니다.');
+                         window.history.back();
+                         return;
+                    }
+
+                    titleInput.value = post.title;
+                    contentInput.value = post.content;
+                } catch(error) {
+                    errorEl.innerText = error.message;
+                }
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorEl.innerText = '';
+
+            const formData = {
+                title: titleInput.value,
+                content: contentInput.value
+            };
+
+            const resourceName = (postType === 'board') ? 'posts' : 'articles';
+            const url = isEditMode ? `${API_BASE_URL}/${postType}/${resourceName}/${postId}` : `${API_BASE_URL}/${postType}/${resourceName}`;
+            const method = isEditMode ? 'PATCH' : 'POST';
+
+            try {
+                // 2. fetch 요청에 credentials: 'include' 옵션 추가
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData),
+                    credentials: 'include' // <-- 쿠키를 함께 보내기 위한 핵심 옵션!
+                });
+                
+                if (response.ok) {
+                    alert('성공적으로 저장되었습니다.');
+                    const savedPost = await response.json();
+                    const detailPage = (postType === 'board') ? 'board_detail.html' : 'blog_detail.html';
+                    window.location.href = `/${detailPage}?id=${savedPost.id}`;
+                } else {
+                    const errorData = await response.json();
+                    errorEl.innerText = errorData.detail || '저장에 실패했습니다.';
+                }
+            } catch (error) {
+                errorEl.innerText = '서버와 통신할 수 없습니다.';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', initializeForm);
+    </script>
+</body>
+</html>

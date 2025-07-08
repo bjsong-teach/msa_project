@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>블로그 상세</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/index.html" class="nav-brand">MSA Project</a>
+            <div class="nav-links">
+                <a href="/board_list.html" class="nav-link">게시판</a>
+                <a href="/blog_list.html" class="nav-link">블로그</a>
+            </div>
+            <div id="auth-links" class="nav-auth"></div>
+        </div>
+    </nav>
+    <main class="container">
+        <article class="card">
+            <header class="card-header">
+                <h1 id="article-title" class="mb-0"></h1>
+                <div id="article-meta" class="post-meta"></div>
+            </header>
+            <div id="article-content" class="card-body"></div>
+            <div id="article-actions" class="card-footer">
+                <a href="/blog_list.html" class="btn btn-secondary">목록으로</a>
+            </div>
+        </article>
+    </main>
+    <script src="/assets/js/auth.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const articleId = params.get('id');
+
+        async function fetchArticleDetail() {
+            const articleContainer = document.querySelector('article');
+            if (!articleId) {
+                articleContainer.innerHTML = '<p>게시물 ID가 없습니다.</p>';
+                return;
+            }
+            try {
+                const response = await fetch(`/api/blog/articles/${articleId}`);
+                if (!response.ok) throw new Error('Article not found');
+
+                const data = await response.json();
+                const article = data.article;
+                const author = data.author;
+
+                document.getElementById('article-title').innerText = article.title;
+                document.getElementById('article-content').innerText = article.content;
+                document.getElementById('article-meta').innerText = `Posted by ${author.username} on ${new Date(article.created_at).toLocaleDateString()}`;
+                
+                const currentUser = await getCurrentUser();
+                if (currentUser && currentUser.id === article.owner_id) {
+                    renderActionButtons(article.id);
+                }
+            } catch (error) {
+                articleContainer.innerHTML = `<p style="color:red;">${error.message}</p>`;
+            }
+        }
+
+        function renderActionButtons(articleId) {
+            const actionsDiv = document.getElementById('article-actions');
+            
+            const editButton = document.createElement('a');
+            editButton.href = `/post_form.html?type=blog&id=${articleId}`;
+            editButton.className = 'btn btn-primary';
+            editButton.innerText = '수정';
+            editButton.style.marginRight = '10px';
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-danger';
+            deleteButton.innerText = '삭제';
+            deleteButton.addEventListener('click', async () => {
+                if (confirm('정말로 이 글을 삭제하시겠습니까?')) {
+                    const response = await fetch(`/api/blog/articles/${articleId}`, { method: 'DELETE' });
+                    if(response.ok) {
+                        alert('삭제되었습니다.');
+                        window.location.href = '/blog_list.html';
+                    } else {
+                        alert('삭제에 실패했습니다.');
+                    }
+                }
+            });
+
+            actionsDiv.prepend(deleteButton);
+            actionsDiv.prepend(editButton);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar();
+            fetchArticleDetail();
+        });
+    </script>
+</body>
+</html>

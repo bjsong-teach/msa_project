@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>자유게시판</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/index.html" class="nav-brand">MSA Project</a>
+            <div class="nav-links">
+                <a href="/board_list.html" class="nav-link">게시판</a>
+                <a href="/blog_list.html" class="nav-link">블로그</a>
+            </div>
+            <div id="auth-links" class="nav-auth"></div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1>자유게시판</h1>
+            <a href="/post_form.html?type=board" class="btn btn-primary">글쓰기</a>
+        </div>
+        <table class="content-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">번호</th>
+                    <th>제목</th>
+                    <th style="width: 15%;">작성자</th>
+                    <th style="width: 15%;">작성일</th>
+                </tr>
+            </thead>
+            <tbody id="board-list-body">
+                </tbody>
+        </table>
+        
+        <nav>
+            <ul id="pagination-ul" class="pagination">
+                </ul>
+        </nav>
+    </main>
+
+    <script src="/assets/js/auth.js"></script>
+    <script>
+        const boardListBody = document.getElementById('board-list-body');
+        const paginationUl = document.getElementById('pagination-ul');
+        const POSTS_PER_PAGE = 10;
+        const API_BASE_URL = '/api'; // Nginx 프록시를 통해 접속
+
+        async function fetchAndRenderBoard(page = 1) {
+            boardListBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">로딩 중...</td></tr>`;
+            paginationUl.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/board/posts?page=${page}&size=${POSTS_PER_PAGE}`);
+                if (!response.ok) throw new Error(`API 호출 실패: ${response.status}`);
+                
+                const data = await response.json();
+                
+                renderPosts(data.items);
+                renderPagination(data.page, data.pages);
+
+            } catch (error) {
+                console.error("게시물 로딩 실패:", error);
+                boardListBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">데이터를 불러오는 데 실패했습니다.</td></tr>`;
+            }
+        }
+
+        function renderPosts(posts) {
+            boardListBody.innerHTML = '';
+            if (!posts || posts.length === 0) {
+                boardListBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">게시물이 없습니다.</td></tr>`;
+                return;
+            }
+            posts.forEach(post => {
+                const formattedDate = new Date(post.created_at).toISOString().split('T')[0];
+                const postRow = `
+                    <tr>
+                        <td>${post.id}</td>
+                        <td><a href="/board_detail.html?id=${post.id}">${post.title}</a></td>
+                        <td>${post.author_username || '알 수 없음'}</td>
+                        <td>${formattedDate}</td>
+                    </tr>`;
+                boardListBody.insertAdjacentHTML('beforeend', postRow);
+            });
+        }
+
+        function renderPagination(currentPage, totalPages) {
+            paginationUl.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                if (i === currentPage) li.classList.add('active');
+                
+                const a = document.createElement('a');
+                a.href = '#';
+                a.innerText = i;
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    fetchAndRenderBoard(i);
+                });
+                li.appendChild(a);
+                paginationUl.appendChild(li);
+            }
+        }
+
+        // 페이지가 처음 로드될 때 네비게이션 바를 그리고, 게시물 목록을 불러옴
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar();
+            fetchAndRenderBoard(1);
+        });
+    </script>
+</body>
+</html>

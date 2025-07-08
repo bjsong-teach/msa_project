@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>로그인</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <main class="container">
+        <div class="form-container">
+            <h1>로그인</h1>
+            <form id="login-form">
+                <p id="error-message" style="color:red;"></p>
+                <div>
+                    <label for="username">사용자 이름:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div>
+                    <label for="password">비밀번호:</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit">로그인</button>
+                <p style="text-align: center; margin-top: 1rem;">
+                    계정이 없으신가요? <a href="/register.html">회원가입</a>
+                </p>
+            </form>
+        </div>
+    </main>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorEl = document.getElementById('error-message');
+            errorEl.innerText = '';
+
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    window.location.href = '/index.html';
+                } else {
+                    errorEl.innerText = "로그인 실패. 아이디 또는 비밀번호를 확인하세요.";
+                }
+            } catch(error) {
+                 errorEl.innerText = '서버와 통신할 수 없습니다.';
+            }
+        });
+    </script>
+</body>
+</html>

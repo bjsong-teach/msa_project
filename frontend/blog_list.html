@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>기술 블로그</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .card-link {
+            text-decoration: none;
+            color: inherit;
+        }
+        .card-link:hover .card {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        .card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/index.html" class="nav-brand">MSA Project</a>
+            <div class="nav-links">
+                <a href="/board_list.html" class="nav-link">게시판</a>
+                <a href="/blog_list.html" class="nav-link">블로그</a>
+            </div>
+            <div id="auth-links" class="nav-auth"></div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
+            <h1>기술 블로그</h1>
+            <a href="/post_form.html?type=blog" class="btn btn-primary">새 글 작성</a>
+        </div>
+        
+        <div id="blog-list-container" class="row row-cols-1 row-cols-md-2 g-4">
+            </div>
+
+        <nav>
+            <ul id="pagination-ul" class="pagination"></ul>
+        </nav>
+    </main>
+    <script src="/assets/js/auth.js"></script>
+    <script>
+        const blogListContainer = document.getElementById('blog-list-container');
+        const paginationUl = document.getElementById('pagination-ul');
+        const POSTS_PER_PAGE = 8; // 블로그는 한 페이지에 8개씩
+
+        async function fetchAndRenderBlog(page = 1) {
+            blogListContainer.innerHTML = `<p>로딩 중...</p>`;
+            paginationUl.innerHTML = '';
+
+            try {
+                const response = await fetch(`/api/blog/articles?page=${page}&size=${POSTS_PER_PAGE}`);
+                if (!response.ok) throw new Error(`API 호출 실패: ${response.status}`);
+                
+                const data = await response.json();
+                renderArticles(data.items);
+                renderPagination(data.page, data.pages);
+
+            } catch (error) {
+                console.error("블로그 로딩 실패:", error);
+                blogListContainer.innerHTML = `<p style="color:red;">데이터를 불러오는 데 실패했습니다.</p>`;
+            }
+        }
+
+        function renderArticles(articles) {
+            blogListContainer.innerHTML = '';
+            if (!articles || articles.length === 0) {
+                blogListContainer.innerHTML = `<p>게시물이 없습니다.</p>`;
+                return;
+            }
+
+            articles.forEach(article => {
+                const formattedDate = new Date(article.created_at).toISOString().split('T')[0];
+                const articleCard = `
+                    <div class="col">
+                        <a href="/blog_detail.html?id=${article.id}" class="card-link">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">${article.title}</h5>
+                                    <p class="card-text">${article.content.substring(0, 100)}...</p>
+                                </div>
+                                <div class="card-footer">
+                                    <small class="text-muted">by ${article.author_username || '알 수 없음'} on ${formattedDate}</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                `;
+                blogListContainer.insertAdjacentHTML('beforeend', articleCard);
+            });
+        }
+
+        function renderPagination(currentPage, totalPages) {
+            paginationUl.innerHTML = '';
+            if (totalPages <= 1) return;
+
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                if (i === currentPage) li.classList.add('active');
+                
+                const a = document.createElement('a');
+                a.href = '#';
+                a.innerText = i;
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    fetchAndRenderBlog(i);
+                });
+
+                li.appendChild(a);
+                paginationUl.appendChild(li);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar();
+            fetchAndRenderBlog(1);
+        });
+    </script>
+</body>
+</html>

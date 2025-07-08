@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>게시물 상세</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar">...</nav>
+    <main class="container">
+        <div class="card">
+            <div class="card-header">
+                <h1 id="post-title"></h1>
+                <div id="post-meta" class="post-meta"></div>
+            </div>
+            <div id="post-content" class="card-body"></div>
+            <div id="post-actions" class="card-footer">
+                <a href="/board_list.html" class="btn btn-secondary">목록으로</a>
+            </div>
+        </div>
+    </main>
+    <script src="/assets/js/auth.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const postId = params.get('id');
+
+        async function fetchPostDetail() {
+            if (!postId) {
+                document.querySelector('.card').innerHTML = '<p>게시물 ID가 없습니다.</p>';
+                return;
+            }
+            try {
+                const response = await fetch(`/api/board/posts/${postId}`);
+                if (!response.ok) throw new Error('Post not found');
+
+                const data = await response.json();
+                const post = data.post;
+                const author = data.author;
+                const views = data.views;
+
+                document.getElementById('post-title').innerText = post.title;
+                document.getElementById('post-content').innerText = post.content;
+                document.getElementById('post-meta').innerText = `작성자: ${author.username} | 조회수: ${views}`;
+                
+                const currentUser = await getCurrentUser();
+                if (currentUser && currentUser.id === post.owner_id) {
+                    renderActionButtons(post.id);
+                }
+            } catch (error) {
+                document.querySelector('.card').innerHTML = `<p style="color:red;">${error.message}</p>`;
+            }
+        }
+
+        function renderActionButtons(postId) {
+            const actionsDiv = document.getElementById('post-actions');
+            const editButton = document.createElement('a');
+            editButton.href = `/post_form.html?type=board&id=${postId}`;
+            editButton.className = 'btn btn-primary';
+            editButton.innerText = '수정';
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-danger';
+            deleteButton.innerText = '삭제';
+            deleteButton.addEventListener('click', async () => {
+                if (confirm('정말로 삭제하시겠습니까?')) {
+                    const response = await fetch(`/api/board/posts/${postId}`, { method: 'DELETE' });
+                    if(response.ok) {
+                        alert('삭제되었습니다.');
+                        window.location.href = '/board_list.html';
+                    } else {
+                        alert('삭제에 실패했습니다.');
+                    }
+                }
+            });
+            actionsDiv.prepend(deleteButton);
+            actionsDiv.prepend(editButton);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNavbar();
+            fetchPostDetail();
+        });
+    </script>
+</body>
+</html>
