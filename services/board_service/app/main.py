@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, Header, Query, status
 from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 import httpx
+from pydantic import BaseModel
 from sqlmodel import SQLModel
 import redis.asyncio as redis
 
@@ -16,7 +17,7 @@ app = FastAPI(title="Board Service")
 USER_SERVICE_URL = os.getenv("USER_SERVICE_URL")
 redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
 
-class PaginatedResponse(SQLModel):
+class PaginatedResponse(BaseModel):
     total: int
     page: int
     size: int

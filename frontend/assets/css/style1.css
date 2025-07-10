@@ -1,0 +1,74 @@
+/* 기본 & 레이아웃 */
+body, h1, h2, h3, h4, h5, h6 { font-family: "Raleway", sans-serif; }
+body { background-color: #f1f1f1; margin: 0; padding-top: 50px; }
+.w3-content { max-width: 1400px; margin-left: auto; margin-right: auto; }
+.w3-row:after, .w3-row:before { content: ""; display: table; clear: both; }
+.w3-col { float: left; width: 100%; padding: 0 8px; box-sizing: border-box; }
+.s12 { width: 99.99999%; }
+@media (min-width:993px) {
+    .l8 { width: 66.66666%; }
+    .l4 { width: 33.33333%; }
+}
+.w3-margin { margin: 16px 0; }
+
+/* 카드 스타일 */
+.w3-card-4 { box-shadow: 0 4px 10px 0 rgba(0,0,0,0.2), 0 4px 20px 0 rgba(0,0,0,0.19); }
+.w3-white { color: #000 !important; background-color: #fff !important; }
+.w3-container { padding: 0.01em 16px; }
+.w3-container:after, .w3-container:before { content: ""; display: table; clear: both; }
+.w3-container h3 { font-weight: 600; }
+.w3-opacity { opacity: 0.60; }
+.w3-padding-large { padding: 12px 24px !important; }
+
+/* 버튼 & 태그 */
+.w3-button {
+    border: none; display: inline-block; padding: 8px 16px;
+    vertical-align: middle; overflow: hidden; text-decoration: none;
+    color: inherit; background-color: inherit; text-align: center;
+    cursor: pointer; white-space: nowrap;
+}
+.w3-border { border: 1px solid #ccc !important; }
+.w3-tag {
+    background-color: #616161; color: #fff;
+    padding: 2px 8px; display: inline-block;
+    font-size: 13px; text-align: center; border-radius: 4px;
+}
+.w3-black { color: #fff !important; background-color: #000 !important; }
+
+/* 헤더 & 네비게이션 */
+.w3-center { text-align: center !important; }
+.w3-padding-32 { padding-top: 32px !important; padding-bottom: 32px !important; }
+.navbar {
+    background-color: #fff;
+    border-bottom: 1px solid #e9ecef;
+    padding: 0.5rem 1rem;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+}
+.navbar .container { display: flex; justify-content: space-between; align-items: center; }
+.nav-brand { font-weight: bold; font-size: 1.25rem; color: #212529; text-decoration: none; }
+.nav-links a, .nav-auth a, .navbar-text {
+    color: #495057; text-decoration: none;
+    padding: 0.5rem; margin-left: 0.5rem;
+}
+.nav-links a:hover, .nav-auth a:hover { color: #0d6efd; }
+
+/* 폼 스타일 */
+.form-container {
+    background: #fff; padding: 2rem; border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 700px; margin: 2rem auto;
+}
+.form-container h1 { text-align: center; margin-bottom: 1.5rem; }
+.form-container div { margin-bottom: 1rem; }
+.form-container label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+.form-container input[type="text"], .form-container input[type="email"], .form-container input[type="password"], .form-container textarea {
+    width: 100%; padding: 0.75rem; border: 1px solid #ced4da;
+    border-radius: 4px; box-sizing: border-box;
+}
+.form-container button {
+    width: 100%; padding: 0.75rem; border: none; border-radius: 4px;
+    background-color: #0d6efd; color: white; font-size: 1rem; cursor: pointer;
+}
+.form-container button:hover { background-color: #0b5ed7; }

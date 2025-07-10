@@ -8,6 +8,7 @@ class Post(SQLModel, table=True):
     content: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     owner_id: int
+    views: int = Field(default=0)
 
 class PostCreate(SQLModel):
     title: str

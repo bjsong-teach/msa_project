@@ -1,10 +1,14 @@
 services:
   nginx:
     image: nginx:alpine
-    ports: ["80:80"]
+    ports: ["8004:80"]
     volumes:
       - ./frontend:/usr/share/nginx/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      # 3. 로컬의 uploads/blog_images 폴더를 Nginx가 접근할 수 있도록 연결
+      - ./uploads/blog_images:/usr/share/nginx/html/static/images
+      # 4. 로컬의 uploads/profile_images 폴더를 Nginx가 접근할 수 있도록 연결
+      - ./uploads/profile_images:/usr/share/nginx/html/static/profiles
     depends_on: [api_gateway]
     networks: [webnet]
 
@@ -12,11 +16,10 @@ services:
   api_gateway:
     build: ./gateway
     volumes: [./gateway/app:/app]
-    ports: ["8080:8000"]
     environment:
-      - USER_SERVICE_URL=http://user_service:8001
-      - BOARD_SERVICE_URL=http://board_service:8002
-      - BLOG_SERVICE_URL=http://blog_service:8003
+      - USER_SERVICE_URL=http://user_service:8006
+      - BOARD_SERVICE_URL=http://board_service:8007
+      - BLOG_SERVICE_URL=http://blog_service:8008
     depends_on:
       user_service: { condition: service_started }
       board_service: { condition: service_started }
@@ -25,7 +28,9 @@ services:
 
   user_service:
     build: ./services/user_service
-    volumes: [./services/user_service/app:/app]
+    volumes: 
+      - ./services/user_service/app:/app
+      - ./uploads/profile_images:/app/static/profiles
     environment:
       - DATABASE_URL=mysql+asyncmy://${DB_USER}:${DB_PASSWORD}@user_db:3306/user_db
       - REDIS_URL=${REDIS_URL}
@@ -48,7 +53,9 @@ services:
 
   blog_service:
     build: ./services/blog_service
-    volumes: [./services/blog_service/app:/app]
+    volumes: 
+      - ./services/blog_service/app:/app
+      - ./uploads/blog_images:/app/static/images
     environment:
       - DATABASE_URL=mysql+asyncmy://${DB_USER}:${DB_PASSWORD}@blogs_db:3306/blogs_db
       - USER_SERVICE_URL=${USER_SERVICE_URL}
@@ -60,7 +67,7 @@ services:
   user_db:
     image: mysql:8.0
     ports: # <--- 이 부분을 추가
-      - "33061:3306" # 내 PC의 33061 포트를 컨테이너의 3306 포트로 연결
+      - "33066:3306" # 내 PC의 33061 포트를 컨테이너의 3306 포트로 연결
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -74,7 +81,7 @@ services:
   board_db:
     image: mysql:8.0
     ports: # <--- 이 부분을 추가
-      - "33062:3306" # 내 PC의 33062 포트를 컨테이너의 3306 포트로 연결
+      - "33067:3306" # 내 PC의 33062 포트를 컨테이너의 3306 포트로 연결
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -88,7 +95,7 @@ services:
   blogs_db:
     image: mysql:8.0
     ports: # <--- 이 부분을 추가
-      - "33063:3306" # 내 PC의 33063 포트를 컨테이너의 3306 포트로 연결
+      - "33068:3306" # 내 PC의 33063 포트를 컨테이너의 3306 포트로 연결
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
