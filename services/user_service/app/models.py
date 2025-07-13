@@ -25,3 +25,10 @@ class UserPublic(SQLModel):
     email: str
     bio: Optional[str] = None
     profile_image_url: Optional[str] = None
+
+class PasswordUpdate(SQLModel):
+    current_password: str
+    new_password: str    
+class Userlogin(SQLModel):
+    email : str
+    password : str

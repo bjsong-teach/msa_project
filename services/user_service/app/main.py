@@ -10,7 +10,7 @@ from redis.asyncio import Redis
 # 같은 폴더에 있는 다른 .py 파일들을 임포트
 from database import init_db, get_session
 from redis_client import get_redis
-from models import User, UserCreate, UserPublic, UserUpdate
+from models import User, UserCreate, UserPublic, UserUpdate, PasswordUpdate,Userlogin
 from auth import (
     get_password_hash, verify_password,
     create_session, delete_session, get_user_id_from_session
@@ -35,6 +35,11 @@ def create_user_public(user: User) -> UserPublic:
 async def on_startup():
     """서버가 시작될 때 DB 테이블을 생성합니다."""
     await init_db()
+
+@app.get("/")
+async def root():
+    """간단한 헬스 체크 엔드포인트"""
+    return {"message": "User Service is running"}
 
 @app.post("/api/auth/register", response_model=UserPublic, status_code=status.HTTP_201_CREATED)
 async def register_user(
@@ -67,20 +72,22 @@ async def register_user(
 @app.post("/api/auth/login")
 async def login(
     response: Response,
-    user_data: UserCreate,
+    user_data: Userlogin,
     session: Annotated[AsyncSession, Depends(get_session)],
     redis: Annotated[Redis, Depends(get_redis)]
 ):
-    """이메일로 로그인 처리"""
-    user_result = await session.exec(select(User).where(User.email == user_data.email))
+    statement = select(User).where(User.email==user_data.email)
+    user_result = await session.exec(statement)
     user = user_result.one_or_none()
     
     if not user or not verify_password(user_data.password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="이메일 또는 비밀번호가 올바르지 않습니다.")
-    
-    session_id = await create_session(redis, user.id)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="이메일 또는 비밀번호가 틀립니다.")
+    if user.id is not None:
+        session_id = await create_session(redis, user.id)
+    else:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="세션 번호가 저장되지 않았습니다.")
     response.set_cookie(key="session_id", value=session_id, httponly=True, samesite="lax", max_age=3600, path="/")
-    return {"message": "Login successful"}
+    return {"message":"Login 성공!"}
 
 @app.post("/api/auth/logout")
 async def logout(response: Response, session_id: Annotated[Optional[str], Cookie()] = None, redis: Annotated[Redis, Depends(get_redis)] = None):
@@ -168,3 +175,30 @@ async def upload_my_profile_image(
     await session.commit()
     await session.refresh(db_user)
     return create_user_public(db_user)
+
+@app.post("/api/auth/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def change_password(
+    password_data: PasswordUpdate,
+    session: Annotated[AsyncSession, Depends(get_session)],
+    redis: Annotated[Redis, Depends(get_redis)],
+    user_id: Annotated[int, Header(alias="X-User-Id")],
+    session_id: Annotated[str | None, Cookie()] = None,
+):
+    """현재 비밀번호를 확인하고 새 비밀번호로 변경합니다."""
+    db_user = await session.get(User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 1. 현재 비밀번호가 맞는지 확인
+    if not verify_password(password_data.current_password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect current password")
+
+    # 2. 새 비밀번호를 해싱하여 저장
+    db_user.hashed_password = get_password_hash(password_data.new_password)
+    await session.commit()
+    
+    # 3. 비밀번호 변경 후, 현재 세션을 로그아웃 처리
+    if session_id:
+        await delete_session(redis, session_id)
+    
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

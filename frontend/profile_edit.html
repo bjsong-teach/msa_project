@@ -20,13 +20,13 @@
         <div class="form-container">
             <h1>프로필 수정</h1>
             <form id="profile-form">
-                <p id="error-message" style="color:red;"></p>
+                <p id="profile-error" style="color:red; text-align: center;"></p>
                 <div style="text-align: center; margin-bottom: 1rem;">
-                    <img id="profile-image-preview" src="" alt="Profile Preview" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover;">
+                    <img id="profile-image-preview" src="" alt="Profile Preview" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #eee;">
                 </div>
                 <div>
-                    <label for="username">이름:</label>
-                    <input type="text" id="username" name="username" required>
+                    <label for="email">이메일 (변경 불가):</label>
+                    <input type="email" id="email" name="email" readonly style="background-color: #e9ecef;">
                 </div>
                 <div>
                     <label for="bio">자기소개:</label>
@@ -36,13 +36,14 @@
                     <label for="profile_image">프로필 이미지 변경:</label>
                     <input type="file" id="profile_image" name="profile_image" accept="image/*">
                 </div>
-                <button type="submit" id="submit-btn">프로필 저장</button>
+                <button type="submit" id="profile-submit-btn">정보 저장</button>
             </form>
         </div>
+
         <div class="form-container" style="margin-top: 2rem;">
             <h2>비밀번호 변경</h2>
             <form id="password-form">
-                <p id="password-error" style="color:red;"></p>
+                <p id="password-error" style="color:red; text-align: center;"></p>
                 <div>
                     <label for="current_password">현재 비밀번호:</label>
                     <input type="password" id="current_password" required>
@@ -62,39 +63,36 @@
 
     <script src="/assets/js/auth.js"></script>
     <script>
-        const form = document.getElementById('profile-form');
-        const usernameInput = document.getElementById('username');
+        const profileForm = document.getElementById('profile-form');
+        const emailInput = document.getElementById('email');
         const bioInput = document.getElementById('bio');
         const imageInput = document.getElementById('profile_image');
         const imagePreview = document.getElementById('profile-image-preview');
-        const errorEl = document.getElementById('error-message');
-        
-        // 페이지 로드 시 현재 프로필 정보를 폼에 채워넣는 함수
-        async function populateProfileForm(user) {
+        const profileErrorEl = document.getElementById('profile-error');
+        const profileSubmitBtn = document.getElementById('profile-submit-btn');
+
+        const passwordForm = document.getElementById('password-form');
+        const passwordErrorEl = document.getElementById('password-error');
+
+        function populateProfileForm(user) {
             if (!user) {
                 alert("로그인이 필요합니다.");
                 window.location.href = "/login.html";
                 return;
             }
-            usernameInput.value = user.username || '';
+            emailInput.value = user.email || '';
             bioInput.value = user.bio || '';
             imagePreview.src = user.profile_image_url || 'https://www.w3schools.com/w3images/avatar_g.jpg';
         }
 
-        // 폼 제출 이벤트 처리
-        form.addEventListener('submit', async (e) => {
+        profileForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            errorEl.innerText = '';
-            const submitBtn = document.getElementById('submit-btn');
-            submitBtn.disabled = true;
-            submitBtn.innerText = '저장 중...';
+            profileErrorEl.innerText = '';
+            profileSubmitBtn.disabled = true;
+            profileSubmitBtn.innerText = '저장 중...';
 
             try {
-                // 1단계: 텍스트 정보 (bio, email) 먼저 수정
-                const textData = {
-                    email: emailInput.value,
-                    bio: bioInput.value,
-                };
+                const textData = { bio: bioInput.value };
                 const textResponse = await fetch('/api/users/me', {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -107,7 +105,6 @@
                     throw new Error(errorData.detail || '프로필 정보 저장에 실패했습니다.');
                 }
 
-                // 2단계: 이미지 파일이 새로 선택된 경우에만 업로드
                 const imageFile = imageInput.files[0];
                 if (imageFile) {
                     const formData = new FormData();
@@ -124,20 +121,18 @@
                 }
 
                 alert('프로필이 성공적으로 수정되었습니다.');
-                window.location.href = '/index.html';
+                window.location.reload();
 
             } catch (error) {
-                errorEl.innerText = error.message;
+                profileErrorEl.innerText = error.message;
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerText = '프로필 저장';
+                profileSubmitBtn.disabled = false;
+                profileSubmitBtn.innerText = '정보 저장';
             }
         });
-
-        // 비밀번호 변경 폼 제출 이벤트 리스너
-        document.getElementById('password-form').addEventListener('submit', async (e) => {
+        
+        passwordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const passwordErrorEl = document.getElementById('password-error');
             const newPassword = document.getElementById('new_password').value;
             const newPasswordConfirm = document.getElementById('new_password_confirm').value;
             
@@ -163,6 +158,8 @@
 
                 if (response.ok) {
                     alert('비밀번호가 성공적으로 변경되었습니다. 다시 로그인해주세요.');
+                    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                    document.cookie = "session_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                     window.location.href = '/login.html';
                 } else {
                     const errorData = await response.json();
@@ -173,7 +170,6 @@
             }
         });
 
-        // 페이지 로드 시 초기화 함수 실행
         document.addEventListener('DOMContentLoaded', async () => {
             const user = await getCurrentUser();
             renderNavbar(user);

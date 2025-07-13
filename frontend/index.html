@@ -3,90 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <title>MSA 프로젝트 메인</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 </head>
 <body>
+<div class="w3-content">
     <nav class="navbar">
         <div class="container">
             <a href="/index.html" class="nav-brand">🚀 MSA Project</a>
             <div class="nav-links">
-                <a href="/board_list.html" class="nav-link">게시판</a>
-                <a href="/blog_list.html" class="nav-link">블로그</a>
+                <a href="/board_list.html" class="nav-link">자유게시판</a>
+                <a href="/blog_list.html" class="nav-link">기술 블로그</a>
             </div>
-            <div id="auth-links" class="nav-auth">
-                </div>
+            <div id="auth-links" class="nav-auth"></div>
         </div>
     </nav>
-    <main class="container">
-        <div style="text-align: center; background: #fff; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-            <h1 style="font-size: 2.5rem; font-weight: bold;">MSA 프로젝트에 오신 것을 환영합니다!</h1>
-            <p style="font-size: 1.2rem; color: #6c757d;">이 사이트는 FastAPI와 MSA 개념으로 구성된 게시판과 블로그를 제공합니다.</p>
-        </div>
 
-        <div style="display: flex; gap: 2rem;">
-            <div style="flex: 1;">
-                <h3>최신 게시글</h3>
-                <div id="latest-board-posts" class="list-group"></div>
-            </div>
-            <div style="flex: 1;">
-                <h3>최신 블로그 글</h3>
-                <div id="latest-blog-articles" class="list-group"></div>
+    <header class="w3-container w3-center w3-padding-32">
+        <h1><b>MSA BLOG & BOARD</b></h1>
+        <p>Welcome to my MSA project built with FastAPI and Docker.</p>
+    </header>
+
+    <main class="w3-row">
+        <div class="w3-col l8 s12">
+            <div id="featured-post-container">
+                <p class="w3-container">로딩 중...</p>
             </div>
         </div>
+        <aside class="w3-col l4">
+            <div id="about-me-card"></div>
+        </aside>
     </main>
+</div>
 
-    <script src="/assets/js/auth.js"></script>
-    <script>
-        const boardListEl = document.getElementById('latest-board-posts');
-        const blogListEl = document.getElementById('latest-blog-articles');
+<script src="/assets/js/auth.js"></script>
+<script>
+    const featuredPostContainer = document.getElementById('featured-post-container');
+    const aboutMeCard = document.getElementById('about-me-card');
+    const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
 
-        async function fetchAndRenderList(url, targetElement, detailPage) {
-            targetElement.innerHTML = '<p>로딩 중...</p>';
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('데이터 로딩 실패');
-                const data = await response.json();
-                
-                targetElement.innerHTML = '';
-                if (data.items.length === 0) {
-                    targetElement.innerHTML = '<p>게시물이 없습니다.</p>';
-                    return;
-                }
-                data.items.forEach(item => {
-                    const link = document.createElement('a');
-                    link.href = `/${detailPage}?id=${item.id}`;
-                    link.className = 'list-item';
-                    link.innerHTML = `<strong>${item.title}</strong><small>${item.author_username || 'Unknown'}</small>`;
-                    targetElement.appendChild(link);
-                });
-            } catch (error) {
-                targetElement.innerHTML = `<p style="color:red;">${error.message}</p>`;
-            }
-        }
-
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .list-group { display: flex; flex-direction: column; gap: 0.5rem; }
-            .list-item { 
-                display: flex; justify-content: space-between; align-items: center;
-                padding: 0.75rem 1rem; background: #fff; border: 1px solid #e9ecef;
-                border-radius: 4px; text-decoration: none; color: #343a40;
-                transition: background-color 0.2s;
-            }
-            .list-item:hover { background-color: #f1f1f1; }
-            .list-item small { color: #6c757d; }
-        `;
-        document.head.appendChild(style);
-
-        // 페이지가 로드될 때 실행될 함수들
-        document.addEventListener('DOMContentLoaded', () => {
-            // 1. 로그인 상태를 확인하고 네비게이션 바 UI를 업데이트합니다.
-            renderNavbar(); 
+    async function renderFeaturedPost() {
+        try {
+            const response = await fetch('/api/blog/articles?page=1&size=1');
+            if (!response.ok) throw new Error('게시글 로딩 실패');
             
-            // 2. 최신 게시물과 블로그 글 목록을 API로 요청하여 그립니다.
-            fetchAndRenderList('/api/board/posts?page=1&size=5', boardListEl, 'board_detail.html');
-            fetchAndRenderList('/api/blog/articles?page=1&size=5', blogListEl, 'blog_detail.html');
-        });
-    </script>
+            const data = await response.json();
+            if (data.items.length === 0) {
+                featuredPostContainer.innerHTML = '<div class="w3-card-4 w3-margin w3-white"><div class="w3-container"><p>최신 글이 없습니다.</p></div></div>';
+                return;
+            }
+
+            const article = data.items[0];
+            const formattedDate = new Date(article.created_at).toLocaleDateString('ko-KR', dateOptions);
+            const imageUrl = article.image_url || 'https://www.w3schools.com/w3images/woods.jpg';
+
+            featuredPostContainer.innerHTML = `
+                <div class="w3-card-4 w3-margin w3-white">
+                    <img src="${imageUrl}" alt="Featured Post" style="width:100%">
+                    <div class="w3-container">
+                        <h3><b>${article.title}</b></h3>
+                        <h5>${article.author_username || 'Unknown'}, <span class="w3-opacity">${formattedDate}</span></h5>
+                    </div>
+                    <div class="w3-container">
+                        <p>${article.content ? article.content.substring(0, 200) : ''}...</p>
+                        <p><a href="/blog_detail.html?id=${article.id}" class="w3-button w3-border w3-padding-large"><b>READ MORE »</b></a></p>
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            console.error("Failed to load featured post:", error);
+            featuredPostContainer.innerHTML = `<div class="w3-card-4 w3-margin w3-white"><div class="w3-container"><p style="color:red;">${error.message}</p></div></div>`;
+        }
+    }
+
+    function renderAboutMe(user) {
+        if (!user) {
+            aboutMeCard.style.display = 'none';
+            return;
+        }
+        
+        aboutMeCard.innerHTML = `
+            <div class="profile-card">
+                <img src="${user.profile_image_url}" alt="내 사진">
+                <div class="profile-content">
+                    
+                    <div class="profile-header">
+                        <h4><b>${user.username}</b></h4>
+                        <a href="profile_edit.html" class="edit-link">정보수정</a>
+                    </div>
+                    
+                    <p class="profile-bio">${user.bio || '자기소개를 입력해주세요.'}</p>
+                    
+                </div>
+            </div>
+        `;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const user = await getCurrentUser();
+        renderNavbar(user); // auth.js의 함수
+        renderFeaturedPost();
+        renderAboutMe(user);
+    });
+</script>
 </body>
 </html>

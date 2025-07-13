@@ -1,56 +1,82 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <title>로그인</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 </head>
 <body>
+<div class="w3-content">
+    <nav class="navbar">
+        <div class="container">
+            <a href="/index.html" class="nav-brand">🚀 MSA Project</a>
+            <div class="nav-links">
+                <a href="/board_list.html" class="nav-link">게시판</a>
+                <a href="/blog_list.html" class="nav-link">블로그</a>
+            </div>
+            <div id="auth-links" class="nav-auth"></div>
+        </div>
+    </nav>
+
     <main class="container">
         <div class="form-container">
             <h1>로그인</h1>
             <form id="login-form">
-                <p id="error-message" style="color:red;"></p>
+                <p id="error-message" style="color:red; text-align: center;"></p>
                 <div>
-                    <label for="username">사용자 이름:</label>
-                    <input type="text" id="username" name="username" required>
+                    <label for="email">이메일:</label>
+                    <input type="email" id="email" name="email" required>
                 </div>
                 <div>
                     <label for="password">비밀번호:</label>
                     <input type="password" id="password" name="password" required>
                 </div>
                 <button type="submit">로그인</button>
-                <p style="text-align: center; margin-top: 1rem;">
+                <p style="text-align: center; margin-top: 1rem; font-size: 0.9em;">
                     계정이 없으신가요? <a href="/register.html">회원가입</a>
                 </p>
             </form>
         </div>
     </main>
-    <script>
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const errorEl = document.getElementById('error-message');
-            errorEl.innerText = '';
 
-            const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData.entries());
+</div>
+<script src="/assets/js/auth.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        renderNavbar(); // 네비게이션 바는 항상 렌더링
+    });
 
-            try {
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorEl = document.getElementById('error-message');
+        errorEl.innerText = '';
 
-                if (response.ok) {
-                    window.location.href = '/index.html';
-                } else {
-                    errorEl.innerText = "로그인 실패. 아이디 또는 비밀번호를 확인하세요.";
-                }
-            } catch(error) {
-                 errorEl.innerText = '서버와 통신할 수 없습니다.';
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            console.log(data);
+            
+            if (response.ok) {
+                window.location.href = '/index.html';
+            } else {
+                const errorData = await response.json();
+                errorEl.innerText = errorData.detail || "로그인에 실패했습니다.";
             }
-        });
-    </script>
+        } catch(error) {
+            errorEl.innerText = '서버와 통신할 수 없습니다.';
+        }
+    });
+</script>
 </body>
 </html>

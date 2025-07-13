@@ -1,73 +1,89 @@
 services:
   nginx:
     image: nginx:alpine
-    ports: ["8004:80"]
+    ports:
+      - "80:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      # 3. 로컬의 uploads/blog_images 폴더를 Nginx가 접근할 수 있도록 연결
       - ./uploads/blog_images:/usr/share/nginx/html/static/images
-      # 4. 로컬의 uploads/profile_images 폴더를 Nginx가 접근할 수 있도록 연결
       - ./uploads/profile_images:/usr/share/nginx/html/static/profiles
-    depends_on: [api_gateway]
-    networks: [webnet]
+    depends_on:
+      - api_gateway
+    networks:
+      - webnet
 
-  # --- 이하 api_gateway, user_service, board_service, blog_service 설정은 이전과 동일 ---
   api_gateway:
     build: ./gateway
-    volumes: [./gateway/app:/app]
+    volumes:
+      - ./gateway/app:/app
+    ports:
+      - "8080:8000"
     environment:
-      - USER_SERVICE_URL=http://user_service:8006
-      - BOARD_SERVICE_URL=http://board_service:8007
-      - BLOG_SERVICE_URL=http://blog_service:8008
+      - USER_SERVICE_URL=http://user_service:8001
+      - BOARD_SERVICE_URL=http://board_service:8002
+      - BLOG_SERVICE_URL=http://blog_service:8003
     depends_on:
-      user_service: { condition: service_started }
-      board_service: { condition: service_started }
-      blog_service: { condition: service_started }
-    networks: [webnet]
+      # ▼▼▼ 모든 서비스의 condition을 service_started로 변경 ▼▼▼
+      user_service:
+        condition: service_started
+      board_service:
+        condition: service_started
+      blog_service:
+        condition: service_started
+    networks:
+      - webnet
 
   user_service:
     build: ./services/user_service
-    volumes: 
+    volumes:
       - ./services/user_service/app:/app
       - ./uploads/profile_images:/app/static/profiles
     environment:
       - DATABASE_URL=mysql+asyncmy://${DB_USER}:${DB_PASSWORD}@user_db:3306/user_db
       - REDIS_URL=${REDIS_URL}
     depends_on:
-      user_db: { condition: service_healthy }
-      redis_db: { condition: service_started }
-    networks: [webnet]
+      user_db:
+        condition: service_healthy
+      redis_db:
+        condition: service_started
+    networks:
+      - webnet
 
   board_service:
     build: ./services/board_service
-    volumes: [./services/board_service/app:/app]
+    volumes:
+      - ./services/board_service/app:/app
     environment:
       - DATABASE_URL=mysql+asyncmy://${DB_USER}:${DB_PASSWORD}@board_db:3306/board_db
       - USER_SERVICE_URL=${USER_SERVICE_URL}
       - REDIS_URL=${REDIS_URL}
     depends_on:
-      board_db: { condition: service_healthy }
-      redis_db: { condition: service_started }
-    networks: [webnet]
+      board_db:
+        condition: service_healthy
+      redis_db:
+        condition: service_started
+    networks:
+      - webnet
 
   blog_service:
     build: ./services/blog_service
-    volumes: 
+    volumes:
       - ./services/blog_service/app:/app
       - ./uploads/blog_images:/app/static/images
     environment:
       - DATABASE_URL=mysql+asyncmy://${DB_USER}:${DB_PASSWORD}@blogs_db:3306/blogs_db
       - USER_SERVICE_URL=${USER_SERVICE_URL}
     depends_on:
-      blogs_db: { condition: service_healthy }
-    networks: [webnet]
+      blogs_db:
+        condition: service_healthy
+    networks:
+      - webnet
 
-  # --- Databases (ports 섹션 추가) ---
   user_db:
     image: mysql:8.0
-    ports: # <--- 이 부분을 추가
-      - "33066:3306" # 내 PC의 33061 포트를 컨테이너의 3306 포트로 연결
+    ports:
+      - "33061:3306"
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -75,13 +91,18 @@ services:
       - MYSQL_DATABASE=user_db
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASSWORD}
-    healthcheck: { test: ["CMD", "mysqladmin", "ping", "-h", "localhost"], interval: 10s, timeout: 5s, retries: 5 }
-    networks: [webnet]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webnet
 
   board_db:
     image: mysql:8.0
-    ports: # <--- 이 부분을 추가
-      - "33067:3306" # 내 PC의 33062 포트를 컨테이너의 3306 포트로 연결
+    ports:
+      - "33062:3306"
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -89,13 +110,18 @@ services:
       - MYSQL_DATABASE=board_db
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASSWORD}
-    healthcheck: { test: ["CMD", "mysqladmin", "ping", "-h", "localhost"], interval: 10s, timeout: 5s, retries: 5 }
-    networks: [webnet]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webnet
 
   blogs_db:
     image: mysql:8.0
-    ports: # <--- 이 부분을 추가
-      - "33068:3306" # 내 PC의 33063 포트를 컨테이너의 3306 포트로 연결
+    ports:
+      - "33063:3306"
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -103,12 +129,23 @@ services:
       - MYSQL_DATABASE=blogs_db
       - MYSQL_USER=${DB_USER}
       - MYSQL_PASSWORD=${DB_PASSWORD}
-    healthcheck: { test: ["CMD", "mysqladmin", "ping", "-h", "localhost"], interval: 10s, timeout: 5s, retries: 5 }
-    networks: [webnet]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webnet
 
   redis_db:
     image: redis:alpine
-    networks: [webnet]
+    healthcheck: # Redis에 healthcheck 추가
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - webnet
 
 networks:
   webnet:

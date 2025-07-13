@@ -42,7 +42,8 @@ async def shutdown_event():
 async def reverse_proxy(request: Request):
     path = request.url.path
     client: httpx.AsyncClient = request.app.state.client
-    
+    print(path)
+    print(USER_SERVICE_URL)
     if path.startswith("/api/users") or path.startswith("/api/auth"):
         base_url = USER_SERVICE_URL
     elif path.startswith("/api/board"):
