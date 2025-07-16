@@ -4,7 +4,6 @@ sqlmodel
 sqlalchemy[asyncio]
 asyncmy
 python-dotenv
+httpx
 redis
-bcrypt
-passlib[bcrypt]
-python-multipart
+apscheduler
