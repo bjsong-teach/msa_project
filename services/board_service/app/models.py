@@ -13,6 +13,7 @@ class Post(SQLModel, table=True):
 class PostCreate(SQLModel):
     title: str
     content: str
+
 class PostUpdate(SQLModel):
     title: Optional[str] = None
     content: Optional[str] = None
