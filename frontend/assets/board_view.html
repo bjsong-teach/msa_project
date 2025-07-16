@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>게시물 상세</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .card { background: #fff; border: 1px solid #e9ecef; border-radius: 8px; margin-top: 2rem; }
+        .card-header { padding: 1rem 1.5rem; background-color: #f8f9fa; border-bottom: 1px solid #e9ecef; }
+        .card-body { padding: 1.5rem; white-space: pre-wrap; min-height: 200px; line-height: 1.7; }
+        .card-footer { padding: 1rem 1.5rem; background-color: #f8f9fa; border-top: 1px solid #e9ecef; text-align: right; }
+        .post-meta { font-size: 0.9em; color: #6c757d; }
+    </style>
+    <script src="/assets/js/auth.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/index.html" class="nav-brand">🚀 MSA Project</a>
+            <div class="nav-links">
+                <a href="/board_list.html" class="nav-link">게시판</a>
+                <a href="/blog_list.html" class="nav-link">블로그</a>
+            </div>
+            <div id="auth-links" class="nav-auth"></div>
+        </div>
+    </nav>
+    <main class="container">
+        <div class="card" id="post-container">
+            <header class="card-header">
+                <h1 id="post-title"></h1>
+                <div id="post-meta" class="post-meta"></div>
+            </header>
+            <div id="post-content" class="card-body"></div>
+            <div id="post-actions" class="card-footer">
+                <a href="/board_list.html" class="btn btn-secondary">목록으로</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const postId = new URLSearchParams(window.location.search).get('id');
+        const postContainer = document.getElementById('post-container');
+        const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+
+        async function fetchAndRenderPost(loggedInUser) {
+            try {
+                const response = await fetch(`/api/board/posts/${postId}`);
+                if (!response.ok) throw new Error('게시물을 찾을 수 없습니다.');
+                
+                const data = await response.json();
+                const { post, author, views } = data;
+
+                const formattedDate = new Date(post.created_at).toLocaleDateString('ko-KR', dateOptions);
+
+                document.getElementById('post-title').innerText = post.title;
+                document.getElementById('post-content').innerText = post.content;
+                document.getElementById('post-meta').innerText = `작성자: ${author.username || 'Unknown'} | 작성일: ${formattedDate} | 조회수: ${views}`;
+
+                if (loggedInUser && loggedInUser.id === post.owner_id) {
+                    renderActionButtons(post.id);
+                }
+            } catch (error) {
+                postContainer.innerHTML = `<div style="padding: 1.5rem;"><h3 style="color:red;">${error.message}</h3></div>`;
+            }
+        }
+        
+        function renderActionButtons(postId) {
+            const actionsDiv = document.getElementById('post-actions');
+            
+            const editButton = document.createElement('a');
+            editButton.href = `/board_edit.html?id=${postId}`;
+            editButton.className = 'btn btn-primary';
+            editButton.innerText = '수정';
+            editButton.style.marginLeft = '1rem';
+
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'btn btn-danger';
+            deleteButton.innerText = '삭제';
+            deleteButton.style.marginLeft = '0.5rem';
+            deleteButton.onclick = async () => {
+                if (confirm('정말로 이 글을 삭제하시겠습니까?')) {
+                    const delResponse = await fetch(`/api/board/posts/${postId}`, { method: 'DELETE', credentials: 'include' });
+                    if (delResponse.ok) {
+                        alert('삭제되었습니다.');
+                        window.location.href = '/board_list.html';
+                    } else {
+                        alert('삭제에 실패했습니다.');
+                    }
+                }
+            };
+            actionsDiv.prepend(deleteButton);
+            actionsDiv.prepend(editButton);
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await getCurrentUser();
+            renderNavbar(user);
+            if (postId) {
+                fetchAndRenderPost(user);
+            } else {
+                postContainer.innerHTML = '<h1>게시물 ID가 없습니다.</h1>';
+            }
+        });
+    </script>
+</body>
+</html>
