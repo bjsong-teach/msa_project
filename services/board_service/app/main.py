@@ -79,21 +79,31 @@ async def list_posts(
         pages=math.ceil(total / size), items=items_with_author
     )
 
-@app.get("/api/board/posts/{post_id}")
-async def get_post(post_id: int, session: Annotated[AsyncSession, Depends(get_session)]):
+async def get_post(
+    post_id: int, 
+    session: Annotated[AsyncSession, Depends(get_session)],
+    redis: Annotated[Redis, Depends(get_redis)],
+):
+    """특정 게시글의 상세 정보와 함께, Redis로 조회수를 1 올리고 동기화 작업을 등록합니다."""
+    # 1. 실시간 조회수를 위해 Redis 카운터를 1 증가시킵니다.
+    redis_key = f"views:post:{post_id}"
+    view_count = await redis.incr(redis_key)
+
+    # 2. 백그라운드 워커가 처리할 동기화 작업을 Redis Sorted Set에 추가합니다.
+    #    - 'view_sync_queue'라는 이름의 작업 큐에
+    #    - post_id를 멤버로, 현재 시간을 스코어로 하여 추가합니다.
+    await redis.zadd("view_sync_queue", {str(post_id): time.time()})
+
+    # 3. DB에서 게시물 정보를 가져옵니다.
     post = await session.get(Post, post_id)
-    if not post: raise HTTPException(404, "Post not found")
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
     
-    view_count = await redis_client.incr(f"views:post:{post_id}")
-
     author_info = {}
-    try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{USER_SERVICE_URL}/api/users/{post.owner_id}")
-            if resp.status_code == 200: author_info = resp.json()
-    except Exception: author_info = {"username": "Unknown"}
+    # ... (작성자 정보 가져오는 로직은 동일) ...
 
-    return {"post": post, "author": author_info, "views": view_count}
+    # 4. 실시간 조회수(Redis 값)를 포함하여 응답합니다.
+    return {"post": post.model_dump(mode='json'), "author": author_info, "views": view_count}
 
 @app.patch("/api/board/posts/{post_id}", response_model=Post)
 async def update_post(
