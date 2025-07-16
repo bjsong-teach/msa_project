@@ -65,7 +65,24 @@ services:
         condition: service_started
     networks:
       - webnet
-
+  
+  board_worker:
+    build: ./services/board_service # board_service와 동일한 환경을 사용
+    volumes:
+      - ./services/board_service/app:/app
+    environment:
+      - DATABASE_URL=mysql+asyncmy://${DB_USER}:${DB_PASSWORD}@board_db:3306/board_db
+      - REDIS_URL=${REDIS_URL}
+    # Uvicorn 대신 worker.py를 실행하도록 명령어 변경
+    command: ["python", "worker.py"]
+    depends_on:
+      board_db:
+        condition: service_healthy
+      redis_db:
+        condition: service_healthy
+    networks:
+      - webnet
+      
   blog_service:
     build: ./services/blog_service
     volumes:
