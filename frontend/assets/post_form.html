@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>게시판 글쓰기/수정</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="/assets/js/auth.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/index.html" class="nav-brand">🚀 MSA Project</a>
+            <div class="nav-links">
+                <a href="/board_list.html" class="nav-link">게시판</a>
+                <a href="/blog_list.html" class="nav-link">블로그</a>
+            </div>
+            <div id="auth-links" class="nav-auth"></div>
+        </div>
+    </nav>
+    <main class="container">
+        <div class="form-container">
+            <h1 id="form-title">새 글 작성</h1>
+            <form id="post-form">
+                <p id="error-message" style="color:red;"></p>
+                <div>
+                    <label for="title">제목:</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                <div>
+                    <label for="content">내용:</label>
+                    <textarea id="content" name="content" rows="15" required></textarea>
+                </div>
+                <button type="submit" id="submit-btn">저장</button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        const postId = new URLSearchParams(window.location.search).get('id');
+        const isEditMode = !!postId;
+
+        const form = document.getElementById('post-form');
+        const titleInput = document.getElementById('title');
+        const contentInput = document.getElementById('content');
+        const formTitle = document.getElementById('form-title');
+        const errorEl = document.getElementById('error-message');
+
+        async function initializeForm() {
+            const user = await getCurrentUser();
+            renderNavbar(user);
+
+            if (!user) {
+                alert('글을 작성하려면 로그인이 필요합니다.');
+                window.location.href = '/login.html';
+                return;
+            }
+
+            formTitle.innerText = isEditMode ? '게시글 수정' : '새 게시글 작성';
+            
+            if (isEditMode) {
+                try {
+                    const response = await fetch(`/api/board/posts/${postId}`);
+                    if (!response.ok) throw new Error('게시글 정보를 불러오는데 실패했습니다.');
+                    
+                    const data = await response.json();
+                    const post = data.post;
+
+                    if (user.id !== post.owner_id) {
+                         alert('수정 권한이 없습니다.');
+                         window.history.back();
+                         return;
+                    }
+                    titleInput.value = post.title;
+                    contentInput.value = post.content;
+                } catch(error) {
+                    errorEl.innerText = error.message;
+                }
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorEl.innerText = '';
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = '저장 중...';
+
+            const url = isEditMode ? `/api/board/posts/${postId}` : `/api/board/posts`;
+            const method = isEditMode ? 'PATCH' : 'POST';
+
+            const postData = {
+                title: titleInput.value,
+                content: contentInput.value,
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(postData),
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '저장에 실패했습니다.');
+                }
+                const savedPost = await response.json();
+                const newPostId = savedPost.id;
+                
+                alert('성공적으로 저장되었습니다.');
+                window.location.href = `/board_view.html?id=${newPostId}`;
+
+            } catch (error) {
+                errorEl.innerText = error.message;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = '저장';
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', initializeForm);
+    </script>
+</body>
+</html>
