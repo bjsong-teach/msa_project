@@ -6,4 +6,4 @@ asyncmy
 python-dotenv
 httpx
 redis
-python-multipart
+apscheduler
